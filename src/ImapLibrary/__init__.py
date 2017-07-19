@@ -30,6 +30,8 @@ except ImportError:
 from builtins import str as ustr
 from ImapLibrary.version import get_version
 
+import ssl
+
 __version__ = get_version()
 
 
@@ -232,13 +234,14 @@ class ImapLibrary(object):
         """
         self._imap.uid('store', email_index, '+FLAGS', r'\SEEN')
 
-    def open_link_from_email(self, email_index, link_index=0):
+    def open_link_from_email(self, email_index, link_index=0, secure=True):
         """Open link URL from given ``link_index`` in email message body of given ``email_index``.
         Returns HTML content of opened link URL.
 
         Arguments:
         - ``email_index``: An email index to identity the email message.
         - ``link_index``: The link index to be open. (Default 0)
+        - ``secure``: Check for valid certs. (Default True)
 
         Examples:
         | Open Link From Email |
@@ -247,7 +250,11 @@ class ImapLibrary(object):
         urls = self.get_links_from_email(email_index)
 
         if len(urls) > link_index:
-            resp = urlopen(urls[link_index])
+            context = ssl.create_default_context()
+            if not secure:
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+            resp = urlopen(urls[link_index], context=context)
             content_type = resp.headers.getheader('content-type')
             if content_type:
                 enc = content_type.split('charset=')[-1]
